@@ -70,7 +70,7 @@ public class PluginCore {
 
         CommandSpec worldUUID = CommandSpec.builder()
                 .description(Text.of("Get World UUID Command"))
-                .permission("myplugin.command.getworlduuid")
+                .permission("ikkachievement.command.getworlduuid")
                 .executor(new WorldUUID(this))
                 .build();
         Sponge.getCommandManager().register(this, worldUUID, "worlduuid");
