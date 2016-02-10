@@ -1,66 +1,92 @@
-//
-// Source code recreated from a .class file by IntelliJ IDEA
-// (powered by Fernflower decompiler)
-//
-
 package events;
 
-import achievements.Achievement;
-import com.flowpowered.math.vector.Vector3i;
+import java.util.UUID;
 import core.PluginCore;
+import java.util.HashMap;
 import java.util.Iterator;
-import org.spongepowered.api.entity.player.Player;
-import org.spongepowered.api.event.Subscribe;
-import org.spongepowered.api.event.entity.player.PlayerMoveEvent;
-import org.spongepowered.api.text.Texts;
-import org.spongepowered.api.world.Location;
+import achievements.LocatedAchievement;
+import achievements.AchievementDiscovery;
+import org.spongepowered.api.entity.Entity;
+import com.flowpowered.math.vector.Vector3i;
+import org.spongepowered.api.event.EventListener;
+import org.spongepowered.api.event.entity.DisplaceEntityEvent;
 
-public class PlayerMove {
-    private final PluginCore core;
+// Class PlayerMove réagit lorsqu'un joueur modifie sa position ou son orientation
+public class PlayerMove extends Event implements EventListener<DisplaceEntityEvent.Move.TargetPlayer> {
+    // playerPositions contient la position des joueurs en fonction de leur UUID
+    HashMap<UUID, Vector3i> playerPositions = new HashMap<UUID, Vector3i>();
+    int stepDid = 0;
 
+    // Constructeur de la class PlayerMove
+    // Permet de récupérer PluginCore
     public PlayerMove(PluginCore core) {
-        this.core = core;
+        super(core);
     }
 
-    @Subscribe
-    public void OnPlayerMove(PlayerMoveEvent event) {
-        Player player = event.getPlayer();
-        Achievement achievement = null;
-        Location pos = null;
-        Iterator var5 = this.core.getPanoramas().iterator();
+    // Récupération de l'évènement lorsqu'un joueur change de position
+    public void handle(DisplaceEntityEvent.Move.TargetPlayer event) throws Exception {
+        // Récupération de la position du joueur
+        String cause = event.getCause().toString();
+        Entity targetEntity = event.getTargetEntity();
+        Vector3i targetEntityPosition = targetEntity.getLocation().getBlockPosition();
 
-        while(var5.hasNext()) {
-            Achievement achiev = (Achievement)var5.next();
-            if(achiev.getWorld() == player.getWorld().getName()) {
-                pos = player.getLocation();
-                if(achiev.getPosition().equals(pos.getBlockPosition())) {
-                    achievement = achiev;
-                    break;
+        // Récupération de l'UUID du joueur
+        String playerName = getPlayerFromCause(cause);
+        UUID playerUUID = core.getGame().getServer().getPlayer(playerName).get().getUniqueId();
+
+        // Nouvelle position du joueur
+        Vector3i playerPosition = targetEntityPosition;
+        // Si aucune position n'est enregistrée pour le joueur donné, on récupère null
+        // sinon on récupère la position qui était stockée et on la remplace par la nouvelle position du joueur
+        Vector3i oldPlayerPosition = playerPositions.putIfAbsent(playerUUID, playerPosition);
+
+        // Si le joueur a changé de bloc
+        if (!(oldPlayerPosition.equals(null) || oldPlayerPosition.equals(playerPosition))) {
+            // Achievement panorama
+            Iterator itaratorPanorama = this.core.getPanoramas().iterator();
+            // On parcoure tous les achievements de type Panorama et l'on vérifie si le joueur est dans le bon monde
+            // et à la bonne position. Si oui, on valide l'achievement.
+            while (itaratorPanorama.hasNext()) {
+                LocatedAchievement achiev = (LocatedAchievement) itaratorPanorama.next();
+                if (achiev.getWorld().equals(targetEntity.getWorld().getUniqueId())) {
+                    if (achiev.getPosition().equals(targetEntityPosition)) {
+                        validAchievement(achiev, cause);
+                        break;
+                    }
                 }
             }
-        }
 
-        if(achievement != null) {
-            event.getGame().getServer().broadcastMessage(Texts.of(player.getName() + " a obtenu le " + achievement.getType() + " " + achievement.getName() + " !"));
-        }
+            // Achievement découverte
+            Iterator iteratorDiscovery = this.core.getDiscoveries().iterator();
+            /* On parcoure tous les achievements de type découverte. Puis on vérifie si le joueur a effectué
+            le nombre de pas nécessaire. Si oui, on valide l'achievement */
+            while (iteratorDiscovery.hasNext()) {
+                AchievementDiscovery achiev = (AchievementDiscovery) iteratorDiscovery.next();
+                // Récupérer le nombre nécessaire de pas pour l'achievement
+                int stepToDo = achiev.getStepNumber();
+                // Récupérer le nombre de pas effectués par le joueur
+                int stepDid = getDidStep();
 
+                if (stepDid <= stepToDo) {
+                    addDidStep();
+                    if (stepDid == stepToDo - 1) {
+                        validAchievement(achiev, cause);
+                        break;
+                    }
+                }
+            }
+            // On met à jour la position du joueur dans la liste
+            playerPositions.put(playerUUID, playerPosition);
+        }
     }
 
-    private boolean isGreatPlayer(Vector3i pressurePlatePosition, Player player) {
-        byte tolerance = 1;
-        Location location = player.getLocation();
-        Vector3i playerPosition = new Vector3i(location.getBlockX(), location.getBlockY(), location.getBlockZ());
-        Vector3i[] positions = new Vector3i[]{new Vector3i(0, 0, 0), new Vector3i(tolerance, 0, 0), new Vector3i(0, tolerance, 0), new Vector3i(0, 0, tolerance), new Vector3i(-tolerance, 0, 0), new Vector3i(0, -tolerance, 0), new Vector3i(0, 0, -tolerance)};
-        Vector3i[] var7 = positions;
-        int var8 = positions.length;
+    // Récupérer le nombre de pas effectués par le joueur
+    private int getDidStep() {
+        return stepDid;
+    }
 
-        for(int var9 = 0; var9 < var8; ++var9) {
-            Vector3i position = var7[var9];
-            if(pressurePlatePosition.equals(playerPosition.add(position))) {
-                return true;
-            }
-        }
-
-        return false;
+    // Ajouter un pas pour le joueur
+    private void addDidStep() {
+        stepDid++;
     }
 }

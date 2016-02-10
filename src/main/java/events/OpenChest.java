@@ -1,43 +1,42 @@
-//
-// Source code recreated from a .class file by IntelliJ IDEA
-// (powered by Fernflower decompiler)
-//
-
 package events;
 
-import achievements.Achievement;
 import core.PluginCore;
 import java.util.Iterator;
+import achievements.LocatedAchievement;
 import org.spongepowered.api.block.BlockType;
 import org.spongepowered.api.block.BlockTypes;
-import org.spongepowered.api.event.Subscribe;
-import org.spongepowered.api.event.entity.player.PlayerInteractBlockEvent;
-import org.spongepowered.api.text.Texts;
+import org.spongepowered.api.block.BlockSnapshot;
+import org.spongepowered.api.event.EventListener;
+import org.spongepowered.api.event.block.InteractBlockEvent;
 
-public class OpenChest {
-    private final PluginCore core;
+// Class OpenChest réagit lorsqu'un joueur effectue un clic droit sur un bloc
+public class OpenChest extends Event implements EventListener<InteractBlockEvent.Secondary> {
 
+    // Constructeur de la class OpenChest
+    // Permet de récupérer PluginCore
     public OpenChest(PluginCore core) {
-        this.core = core;
+        super(core);
     }
 
-    @Subscribe
-    public void OnPlayerMove(PlayerInteractBlockEvent event) {
-        BlockType block = event.getBlock().getType();
+    // Récupération de l'évènement lorsqu'un joueur effectue un clic droit sur un bloc
+    public void handle(InteractBlockEvent.Secondary event) throws Exception {
+        // On récupère le type du bloc
+        BlockSnapshot blockSnap = event.getTargetBlock();
+        BlockType block = blockSnap.getState().getType();
+        // Si le bloc est un coffre
         if(block == BlockTypes.CHEST) {
-            Achievement achievement = null;
-            Iterator var4 = this.core.getChests().iterator();
-
-            while(var4.hasNext()) {
-                Achievement achiev = (Achievement)var4.next();
-                if(achiev.getPosition().equals(event.getBlock().getBlockPosition())) {
-                    achievement = achiev;
-                    break;
+            // Achievement de type coffre caché
+            Iterator iterator = this.core.getChests().iterator();
+            // On parcoure tous les évènements de type coffre caché et l'on vérifie si le joueur est dans le bon monde
+            // et à la bonne position. Si oui, on valide l'achievement.
+            while(iterator.hasNext()) {
+                LocatedAchievement achiev = (LocatedAchievement)iterator.next();
+                if (achiev.getWorld().equals(blockSnap.getWorldUniqueId())) {
+                    if(achiev.getPosition().equals(blockSnap.getPosition())) {
+                        validAchievement(achiev, event.getCause().toString());
+                        break;
+                    }
                 }
-            }
-
-            if(achievement != null) {
-                event.getGame().getServer().broadcastMessage(Texts.of(event.getPlayer().getName() + " a obtenu le " + achievement.getType() + " " + achievement.getName() + " !"));
             }
         }
 
