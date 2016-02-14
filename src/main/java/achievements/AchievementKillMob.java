@@ -6,9 +6,9 @@ public class AchievementKillMob extends Achievement {
     private String mobId;
     private int mobNumber;
 
-    public AchievementKillMob(String name, String description, String mobId, int mobNumber) {
-        super(name, description);
-        this.type = "KillMob";
+    public AchievementKillMob(String name, String description, String mobId, int mobNumber, String urlPicture, int badgeID) {
+        super(name, description, urlPicture, badgeID);
+        this.type = 3;
         this.mobId = mobId;
         this.mobNumber = mobNumber;
     }

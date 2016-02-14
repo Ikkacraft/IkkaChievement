@@ -10,8 +10,8 @@ public abstract class LocatedAchievement extends Achievement{
     private Vector3i position;
 
     // Constructeur
-    public LocatedAchievement(String name, String description, UUID world, Vector3i position) {
-        super(name, description);
+    public LocatedAchievement(String name, String description, UUID world, Vector3i position, String urlPicture, int badgeID) {
+        super(name, description, urlPicture, badgeID);
         this.world = world;
         this.position = position;
     }

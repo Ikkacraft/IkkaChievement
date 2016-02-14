@@ -2,6 +2,10 @@ package events;
 
 import core.PluginCore;
 import achievements.Achievement;
+import ws.Badge;
+import ws.WebService;
+
+import java.io.IOException;
 
 // Class Event. Contient les arguments et méthodes utilisés par tous les types d'événements
 public abstract class Event {
@@ -13,8 +17,15 @@ public abstract class Event {
     }
 
     // Permet de valider un achievement
-    protected void validAchievement(Achievement achievement, String cause) {
-        core.broadcastText(getPlayerFromCause(cause) + " a obtenu le " + achievement.getType() + " " + achievement.getName());
+    protected void validAchievement(Achievement achievement, String cause) throws IOException {
+        WebService ws = new WebService(core);
+        String playerName = getPlayerFromCause(cause);
+        String playerUUID = core.getGame().getServer().getPlayer(playerName).get().getUniqueId().toString();
+        String userBadges = ws.getUnlockUserBadges(playerUUID);
+        if (!userBadges.contains(achievement.getName())) {
+            core.broadcastText(playerName + " a obtenu " + achievement.getName());
+            ws.validAchievement(playerUUID, achievement.getBadgeID());
+        }
     }
 
     // Récupère le nom du joueur grâce à la cause de l'évènement générée par Sponge
