@@ -2,10 +2,7 @@ package events;
 
 import java.io.IOException;
 import java.util.UUID;
-
-import achievements.Achievement;
-import achievements.AchievementKillMob;
-import core.PluginCore;
+import pluginCore.PluginCore;
 import java.util.HashMap;
 import java.util.Iterator;
 import achievements.LocatedAchievement;
@@ -20,7 +17,6 @@ import ws.WebService;
 public class PlayerMove extends Event implements EventListener<DisplaceEntityEvent.Move.TargetPlayer> {
     // playerPositions contient la position des joueurs en fonction de leur UUID
     HashMap<UUID, Vector3i> playerPositions = new HashMap<UUID, Vector3i>();
-    int stepDid = 0;
 
     // Constructeur de la class PlayerMove
     // Permet de récupérer PluginCore
@@ -68,13 +64,11 @@ public class PlayerMove extends Event implements EventListener<DisplaceEntityEve
             while (iteratorDiscovery.hasNext()) {
                 AchievementDiscovery achiev = (AchievementDiscovery) iteratorDiscovery.next();
                 // Récupérer le nombre nécessaire de pas pour l'achievement
-                int stepToDo = achiev.getStepNumber();
-                // Récupérer le nombre de pas effectués par le joueur
-                int stepDid = getDidStep(achiev, playerName);
-
-                if (stepDid <= stepToDo) {
-                    addDidStep(playerUUID.toString(), achiev.getBadgeID(), stepDid);
-                    if (stepDid == stepToDo - 1) {
+                if(!playerHasAchievment(playerUUID.toString(), achiev.getName())) {
+                    // Récupérer le nombre de mobs tués par le joueur
+                    int stepToDo = getDidStep(achiev, playerUUID.toString());
+                    addDidStep(playerUUID.toString(), achiev.getBadgeID(), stepToDo);
+                    if(stepToDo == 0) {
                         validAchievement(achiev, cause);
                         break;
                     }
@@ -86,17 +80,15 @@ public class PlayerMove extends Event implements EventListener<DisplaceEntityEve
     }
 
     // Récupérer le nombre de pas effectués par le joueur
-    private int getDidStep(AchievementDiscovery achiev, String userName) throws IOException {
-        String userUUID = core.getGame().getServer().getPlayer(userName).get().getUniqueId().toString();
+    private int getDidStep(AchievementDiscovery achiev, String userUUID) throws IOException {
         WebService ws = new WebService(core);
         String badges = ws.getUserBadges(userUUID);
         if (badges.contains(achiev.getName())) {
             int indexStart = badges.indexOf(achiev.getName());
             int index = badges.indexOf("remaining", indexStart);
             String remaining = badges.substring(badges.indexOf(":", index)+1, badges.indexOf("}", index));
-            int mobKilled = Integer.valueOf(remaining);
-            core.broadcastText(String.valueOf(mobKilled));
-            return mobKilled;
+            int stepDid = Integer.valueOf(remaining);
+            return stepDid;
         }
         return 0;
     }
@@ -104,6 +96,7 @@ public class PlayerMove extends Event implements EventListener<DisplaceEntityEve
     // Ajouter un pas pour le joueur
     private void addDidStep(String userUUID, int badgeID, int stepDid) throws IOException {
             WebService ws = new WebService(core);
-            ws.updateAchievement(userUUID, badgeID, stepDid+1);
+            core.broadcastText("add did step");
+            ws.updateAchievement(userUUID, badgeID, stepDid-1);
     }
 }

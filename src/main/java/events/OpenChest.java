@@ -1,6 +1,6 @@
 package events;
 
-import core.PluginCore;
+import pluginCore.PluginCore;
 import java.util.Iterator;
 import achievements.LocatedAchievement;
 import org.spongepowered.api.block.BlockType;
